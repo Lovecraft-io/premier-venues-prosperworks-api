@@ -28,12 +28,12 @@ const app = express()
 //   }
 // })
 
-var headers =  {
-  "Content-Type": "application/json",
-  "X-PW-AccessToken" : process.env.PROSPERWORKS_API_KEY,
-  "X-PW-Application" : "developer_api",
-  "X-PW-UserEmail" : "lindsey.lam@glaizalpartners.co"
-};
+var headers = {
+  'Content-Type': 'application/json',
+  'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
+  'X-PW-Application': 'developer_api',
+  'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
+}
 
 app.set('port', process.env.PORT || 3001)
 app.use(bodyParser.json())
@@ -46,17 +46,81 @@ app.use(function(req, res, next) {
 })
 
 app.get('/', (req, res) => {
-  axios.get('https://api.prosperworks.com/developer_api/v1/account', {
-    headers: headers
-  })
-    .then((result) => {
-      console.log(result)
-      return result
-    }).catch((err) => {
-      console.log(err)
-      return err
+  axios
+    .get('https://api.prosperworks.com/developer_api/v1/account', {
+      headers: headers
     })
-    return result
+    .then(result => {
+      const { id, name } = result.data
+      // Get Company Employees
+      axios
+        .get('https://api.prosperworks.com/developer_api/v1/users/', {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
+            'X-PW-Application': 'developer_api',
+            'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
+          }
+        })
+        .then(result => {
+          const employees = result
+          console.log(employees)
+
+          // Get company leads
+          axios({
+            method: 'post',
+            url: 'https://api.prosperworks.com/developer_api/v1/leads/search',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
+              'X-PW-Application': 'developer_api',
+              'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
+            },
+            data: {
+              page_size: 200,
+              sort_by: 'date_modified',
+              sort_direction: 'desc'
+            }
+          })
+            .then(result => {
+              console.log(result.data)
+
+              axios({
+                method: 'post',
+                url:
+                  'https://api.prosperworks.com/developer_api/v1/people/search',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
+                  'X-PW-Application': 'developer_api',
+                  'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
+                },
+                data: {
+                  page_size: 200,
+                  sort_by: 'date_modified',
+                  sort_direction: 'desc'
+                }
+              })
+                .then(result => {
+                  console.log(result.data)
+                  res.send({ ...result.data })
+                })
+                .catch(error => {
+                  console.log(error)
+                })
+            })
+            .catch(error => {
+              console.log(error)
+            })
+        })
+        .catch(error => {
+          console.log(error)
+        })
+    })
+    .catch(err => {
+      console.log(err)
+      res.send(err)
+    })
 })
 
 app.post('/send-mail', (req, res) => {
@@ -83,7 +147,6 @@ app.post('/send-mail', (req, res) => {
 app.post('/subscribe', (req, res) => {
   // const data = req.body
   // let name = data.name || data.name !== null ? data.name : 'No Name'
-
   // const email_info = {
   //   from: `${data.email_address}`,
   //   to: 'sabrina@theresaonthetown.com',
@@ -103,6 +166,6 @@ app.post('/subscribe', (req, res) => {
   // })
   // res.json({ success: res_status })
 })
-app.listen(app.get('port'), function() {})
-
-
+app.listen(app.get('port'), function() {
+  console.log('running')
+})

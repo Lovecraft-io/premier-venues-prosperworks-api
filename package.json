@@ -9,5 +9,8 @@
     "dotenv": "^5.0.1",
     "express": "^4.16.3",
     "nodemailer": "^4.6.3"
+  },
+  "scripts": {
+    "start": "node index.js"
   }
 }
