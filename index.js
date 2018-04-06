@@ -6,13 +6,13 @@ const path = require('path')
 const bodyParser = require('body-parser')
 const axios = require('axios')
 const { API_FUNCTIONS } = require('./prosperworks')
+const User = require('./models/user')
 const app = express()
-
 const headers = {
-    'Content-Type': 'application/json',
-    'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
-    'X-PW-Application': 'developer_api',
-    'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
+  'Content-Type': 'application/json',
+  'X-PW-AccessToken': process.env.PROSPERWORKS_API_KEY,
+  'X-PW-Application': 'developer_api',
+  'X-PW-UserEmail': 'lindsey.lam@glaizalpartners.co'
 }
 
 // const config = {
@@ -37,18 +37,14 @@ const headers = {
 //   }
 // })
 
-
-
 app.set('port', process.env.PORT || 3001)
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', '*')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   res.setHeader('Cache-Control', 'no-cache')
-  // res.setHeader('Content-Type', 'application/json')
-  
   next()
 })
 
@@ -72,52 +68,54 @@ app.get('/glaizal', (req, res) => {
 
 app.post('/glaizal/users/search', async (req, res) => {
   const { user } = req.body
-  const { email } = user
-  const existingUser = await API_FUNCTIONS.searchUsers(email)
-  console.log(user)
 
-  if(existingUser) {
-    res.send({
-      prosperworksUser: true
-    })
+  if (!user.prosperworksId) {
+    const name = user.name ? user.name : false
+    const linkedinId = user.sub ? user.sub : false
+    const platforms = linkedinId ? ['LinkedIn'] : []
+    const picture = user.picture ? user.picture : false
+    const { email, email_verified, venues, id } = user
+    const newLead = new User(
+      id,
+      email,
+      name,
+      picture,
+      linkedinId,
+      venues,
+      platforms
+    )
+
+    const newProsperworksUser = await newLead.addToLeads()
+    console.log(newProsperworksUser)
+    const status = {
+      existingLead: false,
+      newUserLead: true,
+      newLead: newProsperworksUser
+    }
+    res.send({ status: status })
   } else {
     res.send({
-      prosperworksUser: false
+      status: {
+        existingLead: true
+      }
     })
-  }  
+  }
 })
- 
-app.get('/glaizal/employees', (req, res) => { 
+
+app.post('/glaizal/leads/new', (req, res) => {
   axios
-  .get('https://api.prosperworks.com/developer_api/v1/users/', {
-    headers: headers
-  })
-  .then((res) => {
-    console.log(res)
-    const employees = res
-    console.log(employees)
-  })
-  .catch((err) => {
-    console.log(err)
-  })
+    .get('https://api.prosperworks.com/developer_api/v1/leads/search', {
+      headers: headers
+    })
+    .then(res => {
+      console.log(res)
+      const employees = result
+      console.log(employees)
+    })
+    .catch(err => {
+      console.log(err)
+    })
 })
-
-
-app.get('/glaizal/leads', (req, res) => { 
-  axios
-  .get('https://api.prosperworks.com/developer_api/v1/leads/search', {
-    headers: headers
-  })
-  .then((res) => {
-    console.log(res)
-    const employees = result
-    console.log(employees)
-  })
-  .catch((err) => {
-    console.log(err)
-  })
-})
-
 
 /*
   Email Routes
